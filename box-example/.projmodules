@@ -1,0 +1,4 @@
+[submodule "roles/sa-vpn-openvpn"]
+        path = roles/sa-vpn-openvpn
+        url = https://github.com/softasap/sa-vpn-openvpn.git
+

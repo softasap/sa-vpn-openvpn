@@ -1,0 +1,169 @@
+---
+
+  - name: OpenVPN | Install packages
+    apt: pkg="{{item}}"
+    with_items:
+      -  "openvpn"
+      -  "easy-rsa"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Make OpenCA dir
+    file: path="{{openvpn_ca_dir}}" state="directory"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Initialize OpenCA dir
+    shell: "make-cadir {{openvpn_ca_dir}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | patch {{openvpn_ca_dir}}/vars
+    lineinfile: dest="{{openvpn_ca_dir}}/vars"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
+    with_items: "{{openvpn_ca_vars_properties | default([])}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Build Certificate Authority
+    shell: ". {{openvpn_ca_dir}}/vars &&  ./clean-all"
+    args:
+      chdir: "{{openvpn_ca_dir}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Build Root CA
+    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en "\n\n\n\n\n\n\n\ny\ny\n" | ./build-ca"
+    args:
+      chdir: "{{openvpn_ca_dir}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Build Certificate Authority
+    shell: ". {{openvpn_ca_dir}}/vars &&  ./clean-all"
+    args:
+      chdir: "{{openvpn_ca_dir}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Create the Server Certificate
+    shell: ". {{openvpn_ca_dir}}/vars &&  yes | ./build-key-server {{openvpn_ca_key_name}}"
+    args:
+      chdir: "{{openvpn_ca_dir}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | generate a strong Diffie-Hellman keys
+    shell: ". {{openvpn_ca_dir}}/vars &&  ./build-dh"
+    args:
+      chdir: "{{openvpn_ca_dir}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | generate an HMAC signature to strengthen the server's TLS integrity verification
+    shell: "openvpn --genkey --secret keys/ta.key"
+    args:
+      chdir: "{{openvpn_ca_dir}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Generate a Client Certificate and Key Pair
+    shell: ". {{openvpn_ca_dir}}/vars &&  ./build-key {{item.user}}"
+    with_items: "{{openvpn_users | default([])}}"
+    when: item.password is not defined
+    args:
+      chdir: "{{openvpn_ca_dir}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Generate a Client Certificate and Key Pair
+    shell: ". {{openvpn_ca_dir}}/vars &&  ./build-key-pass {{item.user}}"
+    args:
+      chdir: "{{openvpn_ca_dir}}"
+    with_items: "{{openvpn_users | default([])}}"
+    when: item.password is defined
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Copy files to /etc/openvpn
+    copy: remote_src=True src="{{openvpn_ca_dir}}/{{item}}" dest="/etc/openvpn/{{item}}"
+    with_items:
+      - "ca.crt"
+      - "ca.key"
+      - "{{openvpn_ca_key_name}}.crt"
+      - "{{openvpn_ca_key_name}}.key"
+      - "ta.key"
+      - "dh2048.pem"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | patch /etc/openvpn/server.conf
+    lineinfile: dest="/etc/openvpn/server.conf"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
+    with_items: "{{openvpn_server_conf_properties | default([])}}"
+    become: yes
+    tags:
+      - openvpn
+
+
+  - name: OpenVPN | Keys in sysctl.conf
+    sysctl: name={{item.name}} value={{item.value}} ignoreerrors=yes state={{item.state | default('present')}}
+    with_items: "{{ openvpn_sysctl_conf_lines | default([])}}"
+    become: yes
+    tags:
+      - openvpn
+
+
+  - name: OpenVPN | Keys in sysctl.conf (apply)
+    shell: sysctl --system
+    become: yes
+    tags:
+      - openvpn
+
+# https://lists.debian.org/debian-kernel/2016/09/msg00150.html
+# Who uses old kernels now ? We are targeting new one
+
+  - name: OpenVPN | iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+    shell: iptables -t nat -A POSTROUTING -o {{openvpn_interface}} -j MASQUERADE
+    when: (firewall_used is not defined) or firewall_used == 'iptables'
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | iptables-save
+    shell: iptables-save
+    when: (firewall_used is not defined) or firewall_used == 'iptables'
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | /etc/ufw/before.rules
+    blockinfile:
+      dest: /etc/ufw/before.rules
+      insertbefore: "^# Don't delete these required lines, otherwise there will be errors$"
+      block: |
+       # NAT table rules
+       *nat
+       :POSTROUTING ACCEPT [0:0]
+
+       # Forward traffic through eth0 - Change to match you out-interface
+       -A POSTROUTING -s {{openvpn_remote_network}}.0/24 -o {{openvpn_interface}} -j MASQUERADE
+
+       # don't delete the 'COMMIT' line or these nat table rules won't
+       # be processed
+       COMMIT
+    when: firewall_used == 'ufw'
+    become: yes
+    tags:
+      - openvpn

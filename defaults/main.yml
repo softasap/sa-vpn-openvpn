@@ -1,0 +1,48 @@
+---
+# defaults file for sa-vpn-openvpn
+
+role_dir: "{{role_path}}"
+
+
+openvpn_ca_dir: ~/openvpn-ca
+
+openvpn_sysctl_conf_lines:
+  - {
+      name: "net.ipv4.ip_forward",
+      value: "1"
+    }
+
+openvpn_firewall: iptables  # ufw
+
+openvpn_ca_country: UKRAINE
+openvpn_ca_city: LVIV
+openvpn_ca_org: PRIVATE PERSON
+openvpn_ca_email: no_reply@localhost
+openvpn_ca_ou: NA
+
+openvpn_ca_key_name: server
+
+openvpn_users:
+        - {
+            name: "my_user"
+#            password: "my_password"
+          }
+
+openvpn_remote_network: 192.168.0
+openvpn_local_ip: "{{ ansible_default_ipv4.address }}"
+openvpn_remote_ip: "{{pptp_remote_network}}.234-245"
+openvpn_interface: eth0
+
+open_firewall: iptables  # ufw
+
+
+openvpn_ca_vars_properties:
+    - {regexp: "^;?tls-auth ta.key 0(.*)", line: "tls-auth ta.key 0" }
+    - {regexp: "^;?key-direction(.*)", line: "key-direction 0", "^tls-auth(.*)" }
+    - {regexp: "^;?cipher(.*)", line: "cipher AES-128-CBC" }
+    - {regexp: "^;?auth(.*)", line: "auth SHA256", "^cipher(.*)" }
+    - {regexp: "^;?user(.*)", line: "user nobody" }
+    - {regexp: "^;?group(.*)", line: "group nogroup" }
+
+openvpn_server_conf_properties:
+    - {regexp: "^export KEY_COUNTRY=(.*)", line: "export KEY_COUNTRY=\"{{openvpn_ca_country}}\"" }
