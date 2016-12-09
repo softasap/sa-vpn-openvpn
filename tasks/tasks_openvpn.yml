@@ -62,7 +62,8 @@
       - openvpn
 
   - name: OpenVPN | Create the Server Certificate
-    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en \"\n\n\n\n\n\n\n\n\n\ny\ny\n\" | ./build-key-server {{openvpn_ca_key_name}}"
+#    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en \"\n\n\n\n\n\n\n\n\n\ny\ny\ny\ny\n\" | ./build-key-server {{openvpn_ca_key_name}}"
+    shell: ". {{openvpn_ca_dir}}/vars && EASY_RSA=${EASY_RSA:-.} ./pkitool --server {{openvpn_ca_key_name}}"
     args:
       chdir: "{{openvpn_ca_dir}}"
     become: yes
@@ -181,7 +182,7 @@
        # don't delete the 'COMMIT' line or these nat table rules won't
        # be processed
        COMMIT
-    when: firewall_used == 'ufw'
+    when: "firewall_used|default('iptables') == 'ufw'"
     become: yes
     tags:
       - openvpn
