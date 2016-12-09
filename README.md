@@ -1,7 +1,7 @@
 sa-vpn-openvpn
 ==============
 
-[![Build Status](https://travis-ci.org/softasap/sa-vpn-opemvpn.svg?branch=master)](https://travis-ci.org/softasap/sa-vpn-openvpn)
+[![Build Status](https://travis-ci.org/softasap/sa-vpn-openvpn.svg?branch=master)](https://travis-ci.org/softasap/sa-vpn-openvpn)
 
 
 Example of use: check box-example
