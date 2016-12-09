@@ -5,12 +5,13 @@
     with_items:
       -  "openvpn"
       -  "easy-rsa"
+      -  "unzip"
     become: yes
     tags:
       - openvpn
 
   - name: OpenVPN | Make OpenCA dir
-    file: path="{{openvpn_ca_dir}}" state="directory"
+    file: path="{{openvpn_ca_dir}}" state="absent"
     become: yes
     tags:
       - openvpn
@@ -37,7 +38,7 @@
       - openvpn
 
   - name: OpenVPN | Build Root CA
-    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en "\n\n\n\n\n\n\n\ny\ny\n" | ./build-ca"
+    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en \"\n\n\n\n\n\n\n\ny\ny\n\" | ./build-ca"
     args:
       chdir: "{{openvpn_ca_dir}}"
     become: yes
@@ -52,11 +53,22 @@
     tags:
       - openvpn
 
-  - name: OpenVPN | Create the Server Certificate
-    shell: ". {{openvpn_ca_dir}}/vars &&  yes | ./build-key-server {{openvpn_ca_key_name}}"
+  - name: OpenVPN | Init ca.* certs
+    shell: ". {{openvpn_ca_dir}}/vars &&  ./pkitool --initca"
     args:
       chdir: "{{openvpn_ca_dir}}"
     become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Create the Server Certificate
+    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en \"\n\n\n\n\n\n\n\n\n\ny\ny\n\" | ./build-key-server {{openvpn_ca_key_name}}"
+    args:
+      chdir: "{{openvpn_ca_dir}}"
+    become: yes
+    register: create_cert_results
+    changed_when: "'error' not in create_cert_results.stderr"
+    failed_when: "'Data Base Updated' not in create_cert_results.stderr"
     tags:
       - openvpn
 
@@ -77,7 +89,7 @@
       - openvpn
 
   - name: OpenVPN | Generate a Client Certificate and Key Pair
-    shell: ". {{openvpn_ca_dir}}/vars &&  ./build-key {{item.user}}"
+    shell: ". {{openvpn_ca_dir}}/vars &&  ./build-key {{item.name}}"
     with_items: "{{openvpn_users | default([])}}"
     when: item.password is not defined
     args:
@@ -87,7 +99,7 @@
       - openvpn
 
   - name: OpenVPN | Generate a Client Certificate and Key Pair
-    shell: ". {{openvpn_ca_dir}}/vars &&  ./build-key-pass {{item.user}}"
+    shell: ". {{openvpn_ca_dir}}/vars &&  ./build-key-pass {{item.name}}"
     args:
       chdir: "{{openvpn_ca_dir}}"
     with_items: "{{openvpn_users | default([])}}"
@@ -97,7 +109,7 @@
       - openvpn
 
   - name: OpenVPN | Copy files to /etc/openvpn
-    copy: remote_src=True src="{{openvpn_ca_dir}}/{{item}}" dest="/etc/openvpn/{{item}}"
+    copy: remote_src=True src="{{openvpn_ca_dir}}/keys/{{item}}" dest="/etc/openvpn/{{item}}"
     with_items:
       - "ca.crt"
       - "ca.key"
@@ -105,6 +117,12 @@
       - "{{openvpn_ca_key_name}}.key"
       - "ta.key"
       - "dh2048.pem"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Unpack server.conf from samples if missed
+    shell: "gunzip -c /usr/share/doc/openvpn/examples/sample-config-files/server.conf.gz > /etc/openvpn/server.conf"
     become: yes
     tags:
       - openvpn
