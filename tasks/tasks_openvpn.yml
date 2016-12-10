@@ -29,6 +29,14 @@
     tags:
       - openvpn
 
+  - name: OpenVPN | patch extra {{openvpn_ca_dir}}/vars
+    lineinfile: dest="{{openvpn_ca_dir}}/vars"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
+    with_items: "{{openvpn_ca_vars_properties_extra | default([])}}"
+    become: yes
+    tags:
+      - openvpn
+
+
   - name: OpenVPN | Build Certificate Authority
     shell: ". {{openvpn_ca_dir}}/vars &&  ./clean-all"
     args:
@@ -90,22 +98,29 @@
       - openvpn
 
   - name: OpenVPN | Generate a Client Certificate and Key Pair
-    shell: ". {{openvpn_ca_dir}}/vars &&  ./build-key {{item.name}}"
+#    shell: ". {{openvpn_ca_dir}}/vars && echo -en \"\n\n\n\n\n\n\n\n\n\ny\ny\n\" | ./build-key {{item.name}}"
+    shell: ". {{openvpn_ca_dir}}/vars && ./build-key --batch {{item.name}}"
     with_items: "{{openvpn_users | default([])}}"
     when: item.password is not defined
     args:
       chdir: "{{openvpn_ca_dir}}"
     become: yes
+    register: create_client_nopass_results
+    changed_when: "'error' not in create_client_nopass_results.stderr"
+    failed_when: "'Data Base Updated' not in create_client_nopass_results.stderr"
     tags:
       - openvpn
 
   - name: OpenVPN | Generate a Client Certificate and Key Pair
-    shell: ". {{openvpn_ca_dir}}/vars &&  ./build-key-pass {{item.name}}"
+    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en \"{{item.password}}\n{{item.password}}\n\" | ./build-key-pass --batch  {{item.name}}"
     args:
       chdir: "{{openvpn_ca_dir}}"
     with_items: "{{openvpn_users | default([])}}"
     when: item.password is defined
     become: yes
+    register: create_client_results
+    changed_when: "'error' not in create_client_results.stderr"
+    failed_when: "'Data Base Updated' not in create_client_results.stderr"
     tags:
       - openvpn
 
@@ -131,6 +146,13 @@
   - name: OpenVPN | patch /etc/openvpn/server.conf
     lineinfile: dest="/etc/openvpn/server.conf"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
     with_items: "{{openvpn_server_conf_properties | default([])}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | patch extra /etc/openvpn/server.conf
+    lineinfile: dest="/etc/openvpn/server.conf"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
+    with_items: "{{openvpn_server_conf_properties_extra | default([])}}"
     become: yes
     tags:
       - openvpn
@@ -183,6 +205,62 @@
        # be processed
        COMMIT
     when: "firewall_used|default('iptables') == 'ufw'"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Enable and start service
+    service: name="openvpn@{{openvpn_ca_key_name}}" state="restarted" enabled="yes"
+    when: docker_test is not defined
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Make client-configs dir
+    file: path="{{openvpn_ca_dir}}/client-configs/files" state="directory"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Copy boilerplate for client config
+    copy: remote_src=True src="/usr/share/doc/openvpn/examples/sample-config-files/client.conf" dest="{{openvpn_ca_dir}}/client-configs/base.conf"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | patch {{openvpn_ca_dir}}/client-configs/base.conf
+    lineinfile: dest="{{openvpn_ca_dir}}/client-configs/base.conf"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
+    with_items: "{{openvpn_client_properties | default([])}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | patch extra {{openvpn_ca_dir}}/client-configs/base.conf
+    lineinfile: dest="{{openvpn_ca_dir}}/client-configs/base.conf"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
+    with_items: "{{openvpn_client_properties_extra | default([])}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Template make_config.sh
+    template: src="{{role_dir}}/templates/make_config.sh.j2" dest="{{openvpn_ca_dir}}/client-configs/make_config.sh" mode="u=rwx,g=rx,o="
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | Generate Generate Client Configurations
+    shell: "./make_config.sh {{item.name}}"
+    args:
+      chdir: "{{openvpn_ca_dir}}/client-configs"
+    with_items: "{{openvpn_users | default([])}}"
+    become: yes
+    tags:
+      - openvpn
+
+  - name: Download migration pack
+    synchronize: mode=pull src="{{openvpn_ca_dir}}/client-configs/files/{{item.name}}.ovpn" dest="{{playbook_dir}}/{{item.name}}.ovpn"
+    with_items: "{{openvpn_users | default([])}}"
+    ignore_errors: yes
     become: yes
     tags:
       - openvpn

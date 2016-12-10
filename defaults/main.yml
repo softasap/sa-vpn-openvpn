@@ -28,9 +28,8 @@ openvpn_users:
 #            password: "my_password"
           }
 
-openvpn_remote_network: 192.168.0
+openvpn_remote_network: 10.8.0.0 255.255.255.0 # Use some subnet planner if you assign in your local network
 openvpn_local_ip: "{{ ansible_default_ipv4.address }}"
-openvpn_remote_ip: "{{pptp_remote_network}}.234-245"
 openvpn_interface: eth0
 
 open_firewall: iptables  # ufw
@@ -44,6 +43,8 @@ openvpn_ca_vars_properties:
     - {regexp: "^export KEY_OU=(.*)", line: "export KEY_OU=\"{{openvpn_ca_ou}}\"" }
     - {regexp: "^export KEY_NAME=(.*)", line: "export KEY_NAME=\"{{openvpn_ca_key_name}}\"" }
 
+openvpn_ca_vars_properties_extra: []
+
 openvpn_server_conf_properties:
     - {regexp: "^;?tls-auth ta.key 0(.*)", line: "tls-auth ta.key 0" }
     - {regexp: "^;?key-direction(.*)", line: "key-direction 0", "^tls-auth(.*)" }
@@ -51,3 +52,24 @@ openvpn_server_conf_properties:
     - {regexp: "^;?auth(.*)", line: "auth SHA256", "^cipher(.*)" }
     - {regexp: "^;?user(.*)", line: "user nobody" }
     - {regexp: "^;?group(.*)", line: "group nogroup" }
+    - {regexp: "^server (.*)", line: "server {{openvpn_remote_network}}" }
+
+openvpn_server_conf_properties_extra: []
+
+
+openvpn_client_properties:
+    - {regexp: "^;?user(.*)", line: "user nobody" }
+    - {regexp: "^;?group(.*)", line: "group nogroup" }
+    - {regexp: "^;?proto(.*)", line: "proto udp" }
+    - {regexp: "^remote my-server-1(.*)", line: "remote {{openvpn_local_ip}} 1194" }
+    - {regexp: "^ca ca.crt", line: "#ca ca.crt" }
+    - {regexp: "^key client.key", line: "#key client.key" }
+    - {regexp: "^cert client.crt", line: "#cert client.crt" }
+    - {regexp: "^;?cipher(.*)", line: "cipher AES-128-CBC" }
+    - {regexp: "^;?auth(.*)", line: "auth SHA256", "^cipher(.*)" }
+    - {regexp: "^;?key-direction(.*)", line: "key-direction 1", "^tls-auth(.*)" }
+    - {regexp: "^# script-security 2", line: "# script-security 2" }
+    - {regexp: "^# up /etc/openvpn/update-resolv-conf", line: "# up /etc/openvpn/update-resolv-conf" }
+    - {regexp: "^# down /etc/openvpn/update-resolv-conf", line: "# down /etc/openvpn/update-resolv-conf" }
+
+openvpn_client_properties_extra: []
