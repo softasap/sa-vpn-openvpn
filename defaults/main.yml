@@ -4,7 +4,7 @@
 role_dir: "{{role_path}}"
 
 
-openvpn_ca_dir: ~/openvpn-ca
+openvpn_ca_dir: /root/openvpn-ca
 
 openvpn_sysctl_conf_lines:
   - {
