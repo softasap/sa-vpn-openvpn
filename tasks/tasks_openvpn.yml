@@ -257,7 +257,7 @@
     tags:
       - openvpn
 
-  - name: Download migration pack
+  - name: Download OpenVPN profiles
     synchronize: mode=pull src="{{openvpn_ca_dir}}/client-configs/files/{{item.name}}.ovpn" dest="{{playbook_dir}}/{{item.name}}.ovpn"
     with_items: "{{openvpn_users | default([])}}"
     ignore_errors: yes
