@@ -53,6 +53,8 @@ openvpn_server_conf_properties:
     - {regexp: "^;?user(.*)", line: "user nobody" }
     - {regexp: "^;?group(.*)", line: "group nogroup" }
     - {regexp: "^server (.*)", line: "server {{openvpn_remote_network}}" }
+    - {regexp: "^dh dh(.*)", line: "dh dh2048.pem" }
+
 
 openvpn_server_conf_properties_extra: []
 
