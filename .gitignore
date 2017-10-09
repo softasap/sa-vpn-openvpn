@@ -2,3 +2,4 @@ box-example/roles
 *.retry
 tempfile
 do.sh
+*.ovpn
