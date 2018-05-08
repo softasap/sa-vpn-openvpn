@@ -251,8 +251,8 @@
     tags:
       - openvpn
 
-  - name: OpenVPN | template client.conf from local state
-    template: src="{{role_dir}}/templates/server.conf.j2" dest="/etc/openvpn/server.conf"
+  - name: OpenVPN | template base.conf from local state
+    template: src="{{role_dir}}/templates/server.conf.j2" dest="{{openvpn_ca_dir}}/client-configs/base.conf"
     when: client_config_sample_used is failed
     become: yes
     tags:
