@@ -139,6 +139,15 @@
 
   - name: OpenVPN | Unpack server.conf from samples if missed
     shell: "gunzip -c /usr/share/doc/openvpn/examples/sample-config-files/server.conf.gz > /etc/openvpn/server.conf"
+    ignore_errors: true
+    register: config_sample_used
+    become: yes
+    tags:
+      - openvpn
+
+  - name: OpenVPN | template server.conf from local state
+    template: src="{{role_dir}}/templates/server.conf.j2" dest="/etc/openvpn/server.conf"
+    when: config_sample_used is failed
     become: yes
     tags:
       - openvpn
