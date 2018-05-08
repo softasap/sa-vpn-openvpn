@@ -245,9 +245,19 @@
 
   - name: OpenVPN | Copy boilerplate for client config
     copy: remote_src=True src="/usr/share/doc/openvpn/examples/sample-config-files/client.conf" dest="{{openvpn_ca_dir}}/client-configs/base.conf"
+    ignore_errors: true
+    register: client_config_sample_used
     become: yes
     tags:
       - openvpn
+
+  - name: OpenVPN | template client.conf from local state
+    template: src="{{role_dir}}/templates/server.conf.j2" dest="/etc/openvpn/server.conf"
+    when: client_config_sample_used is failed
+    become: yes
+    tags:
+      - openvpn
+
 
   - name: OpenVPN | patch {{openvpn_ca_dir}}/client-configs/base.conf
     lineinfile: dest="{{openvpn_ca_dir}}/client-configs/base.conf"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
