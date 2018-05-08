@@ -42,7 +42,7 @@ openvpn_ca_vars_properties:
     - {regexp: "^export KEY_EMAIL=(.*)", line: "export KEY_EMAIL=\"{{openvpn_ca_email}}\"" }
     - {regexp: "^export KEY_OU=(.*)", line: "export KEY_OU=\"{{openvpn_ca_ou}}\"" }
     - {regexp: "^export KEY_NAME=(.*)", line: "export KEY_NAME=\"{{openvpn_ca_key_name}}\"" }
-
+    - {regexp: "^export KEY_CONFIG=(.*)", line: "export KEY_CONFIG=\"$EASY_RSA/openssl-1.0.0.cnf\"" }
 openvpn_ca_vars_properties_extra: []
 
 openvpn_server_conf_properties:
