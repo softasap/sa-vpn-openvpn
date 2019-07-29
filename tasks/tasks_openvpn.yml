@@ -195,6 +195,7 @@
   - name: OpenVPN | Keys in sysctl.conf
     sysctl: name={{ item.name }} value={{ item.value }} ignoreerrors=yes state={{ item.state | default('present') }}
     with_items: "{{ openvpn_sysctl_conf_lines | default([]) }}"
+    when: docker_test is not defined
     become: yes
     tags:
       - openvpn
