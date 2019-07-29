@@ -1,6 +1,5 @@
 ---
 # tasks file for sa-vpn-openvpn
 
-  - include: tasks_openvpn.yml
+  - include_tasks: tasks_openvpn.yml
 
-  

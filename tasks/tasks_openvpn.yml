@@ -21,6 +21,7 @@
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | patch {{openvpn_ca_dir}}/vars
     lineinfile: dest="{{openvpn_ca_dir}}/vars"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
@@ -60,6 +61,7 @@
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | Init ca.* certs
     shell: ". {{openvpn_ca_dir}}/vars &&  ./pkitool --initca"
@@ -68,6 +70,7 @@
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | Create the Server Certificate
 #    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en \"\n\n\n\n\n\n\n\n\n\ny\ny\ny\ny\n\" | ./build-key-server {{openvpn_ca_key_name}}"
@@ -80,6 +83,7 @@
     failed_when: "'Data Base Updated' not in create_cert_results.stderr"
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | generate a strong Diffie-Hellman keys
     shell: ". {{openvpn_ca_dir}}/vars &&  ./build-dh"
@@ -88,6 +92,7 @@
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | generate an HMAC signature to strengthen the server's TLS integrity verification
     shell: "openvpn --genkey --secret keys/ta.key"
@@ -96,6 +101,7 @@
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | Generate a Client Certificate and Key Pair
 #    shell: ". {{openvpn_ca_dir}}/vars && echo -en \"\n\n\n\n\n\n\n\n\n\ny\ny\n\" | ./build-key {{item.name}}"
@@ -110,6 +116,7 @@
     failed_when: "'Data Base Updated' not in create_client_nopass_results.stderr"
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | Generate a Client Certificate and Key Pair
     shell: ". {{openvpn_ca_dir}}/vars &&  echo -en \"{{item.password}}\n{{item.password}}\n\" | ./build-key-pass --batch  {{item.name}}"
@@ -123,6 +130,7 @@
     failed_when: "'Data Base Updated' not in create_client_results.stderr"
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | Copy files to /etc/openvpn
     copy: remote_src=True src="{{openvpn_ca_dir}}/keys/{{item}}" dest="/etc/openvpn/{{item}}"
@@ -144,6 +152,7 @@
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | template server.conf from local state
     template: src="{{role_dir}}/templates/server.conf.j2" dest="/etc/openvpn/server.conf"
@@ -166,14 +175,12 @@
     tags:
       - openvpn
 
-
   - name: OpenVPN | Keys in sysctl.conf
     sysctl: name={{item.name}} value={{item.value}} ignoreerrors=yes state={{item.state | default('present')}}
     with_items: "{{ openvpn_sysctl_conf_lines | default([])}}"
     become: yes
     tags:
       - openvpn
-
 
   - name: OpenVPN | Keys in sysctl.conf (apply)
     shell: sysctl --system
