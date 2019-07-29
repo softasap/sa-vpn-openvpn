@@ -1,7 +1,6 @@
 ---
-
   - name: OpenVPN | Install packages
-    apt: pkg="{{item}}"
+    apt: pkg="{{ item }}"
     with_items:
       -  "openvpn"
       -  "easy-rsa"
@@ -11,43 +10,52 @@
       - openvpn
 
   - name: OpenVPN | Make OpenCA dir
-    file: path="{{openvpn_ca_dir}}" state="absent"
+    file: path="{{ openvpn_ca_dir }}" state="absent"
     become: yes
     tags:
       - openvpn
 
   - name: OpenVPN | Initialize OpenCA dir
-    shell: "make-cadir {{openvpn_ca_dir}}"
+    shell: "make-cadir {{ openvpn_ca_dir }}"
     become: yes
     tags:
       - openvpn
       - skip_ansible_lint
 
   - name: OpenVPN | patch {{openvpn_ca_dir}}/vars
-    lineinfile: dest="{{openvpn_ca_dir}}/vars"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
-    with_items: "{{openvpn_ca_vars_properties | default([])}}"
+    lineinfile:
+      dest: "{{ openvpn_ca_dir }}/vars"
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      insertafter: "{{ item.insertafter | default('EOF') }}"
+    with_items: "{{ openvpn_ca_vars_properties | default([]) }}"
     become: yes
     tags:
       - openvpn
 
-  - name: OpenVPN | patch extra {{openvpn_ca_dir}}/vars
-    lineinfile: dest="{{openvpn_ca_dir}}/vars"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
-    with_items: "{{openvpn_ca_vars_properties_extra | default([])}}"
+  - name: OpenVPN | patch extra {{ openvpn_ca_dir }}/vars
+    lineinfile:
+      dest: "{{ openvpn_ca_dir }}/vars"
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      insertafter: "{{ item.insertafter | default('EOF') }}"
+    with_items: "{{ openvpn_ca_vars_properties_extra | default([]) }}"
     become: yes
     tags:
       - openvpn
 
 
   - name: OpenVPN | Build Certificate Authority
-    shell: ". {{openvpn_ca_dir}}/vars &&  ./clean-all"
+    shell: ". {{ openvpn_ca_dir }}/vars &&  ./clean-all"
     args:
-      chdir: "{{openvpn_ca_dir}}"
+      chdir: "{{ openvpn_ca_dir }}"
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | Build Root CA
-    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en \"\n\n\n\n\n\n\n\ny\ny\n\" | ./build-ca"
+    shell: ". {{ openvpn_ca_dir }}/vars &&  echo -en \"\n\n\n\n\n\n\n\ny\ny\n\" | ./build-ca"
     args:
       chdir: "{{openvpn_ca_dir}}"
     become: yes
@@ -55,28 +63,28 @@
       - openvpn
 
   - name: OpenVPN | Build Certificate Authority
-    shell: ". {{openvpn_ca_dir}}/vars &&  ./clean-all"
+    shell: ". {{ openvpn_ca_dir }}/vars &&  ./clean-all"
     args:
-      chdir: "{{openvpn_ca_dir}}"
+      chdir: "{{ openvpn_ca_dir }}"
     become: yes
     tags:
       - openvpn
       - skip_ansible_lint
 
   - name: OpenVPN | Init ca.* certs
-    shell: ". {{openvpn_ca_dir}}/vars &&  ./pkitool --initca"
+    shell: ". {{ openvpn_ca_dir }}/vars &&  ./pkitool --initca"
     args:
-      chdir: "{{openvpn_ca_dir}}"
+      chdir: "{{ openvpn_ca_dir }}"
     become: yes
     tags:
       - openvpn
       - skip_ansible_lint
 
   - name: OpenVPN | Create the Server Certificate
-#    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en \"\n\n\n\n\n\n\n\n\n\ny\ny\ny\ny\n\" | ./build-key-server {{openvpn_ca_key_name}}"
-    shell: ". {{openvpn_ca_dir}}/vars && EASY_RSA=${EASY_RSA:-.} ./pkitool --server {{openvpn_ca_key_name}}"
+#    shell: ". {{ openvpn_ca_dir }}/vars &&  echo -en \"\n\n\n\n\n\n\n\n\n\ny\ny\ny\ny\n\" | ./build-key-server {{ openvpn_ca_key_name }}"
+    shell: ". {{ openvpn_ca_dir }}/vars && EASY_RSA=${EASY_RSA:-.} ./pkitool --server {{ openvpn_ca_key_name }}"
     args:
-      chdir: "{{openvpn_ca_dir}}"
+      chdir: "{{ openvpn_ca_dir }}"
     become: yes
     register: create_cert_results
     changed_when: "'error' not in create_cert_results.stderr"
@@ -86,9 +94,9 @@
       - skip_ansible_lint
 
   - name: OpenVPN | generate a strong Diffie-Hellman keys
-    shell: ". {{openvpn_ca_dir}}/vars &&  ./build-dh"
+    shell: ". {{ openvpn_ca_dir }}/vars &&  ./build-dh"
     args:
-      chdir: "{{openvpn_ca_dir}}"
+      chdir: "{{ openvpn_ca_dir }}"
     become: yes
     tags:
       - openvpn
@@ -119,10 +127,10 @@
       - skip_ansible_lint
 
   - name: OpenVPN | Generate a Client Certificate and Key Pair
-    shell: ". {{openvpn_ca_dir}}/vars &&  echo -en \"{{item.password}}\n{{item.password}}\n\" | ./build-key-pass --batch  {{item.name}}"
+    shell: ". {{ openvpn_ca_dir }}/vars &&  echo -en \"{{ item.password }}\n{{ item.password }}\n\" | ./build-key-pass --batch  {{ item.name }}"
     args:
-      chdir: "{{openvpn_ca_dir}}"
-    with_items: "{{openvpn_users | default([])}}"
+      chdir: "{{ openvpn_ca_dir }}"
+    with_items: "{{ openvpn_users | default([]) }}"
     when: item.password is defined
     become: yes
     register: create_client_results
@@ -133,12 +141,12 @@
       - skip_ansible_lint
 
   - name: OpenVPN | Copy files to /etc/openvpn
-    copy: remote_src=True src="{{openvpn_ca_dir}}/keys/{{item}}" dest="/etc/openvpn/{{item}}"
+    copy: remote_src=True src="{{ openvpn_ca_dir }}/keys/{{ item }}" dest="/etc/openvpn/{{ item }}"
     with_items:
       - "ca.crt"
       - "ca.key"
-      - "{{openvpn_ca_key_name}}.crt"
-      - "{{openvpn_ca_key_name}}.key"
+      - "{{ openvpn_ca_key_name }}.crt"
+      - "{{ openvpn_ca_key_name }}.key"
       - "ta.key"
       - "dh2048.pem"
     become: yes
@@ -155,29 +163,37 @@
       - skip_ansible_lint
 
   - name: OpenVPN | template server.conf from local state
-    template: src="{{role_dir}}/templates/server.conf.j2" dest="/etc/openvpn/server.conf"
+    template: src="{{ role_dir }}/templates/server.conf.j2" dest="/etc/openvpn/server.conf"
     when: config_sample_used is failed
     become: yes
     tags:
       - openvpn
 
   - name: OpenVPN | patch /etc/openvpn/server.conf
-    lineinfile: dest="/etc/openvpn/server.conf"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
-    with_items: "{{openvpn_server_conf_properties | default([])}}"
+    lineinfile:
+      dest: "/etc/openvpn/server.conf"
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      insertafter: "{{ item.insertafter | default('EOF') }}"
+    with_items: "{{ openvpn_server_conf_properties | default([]) }}"
     become: yes
     tags:
       - openvpn
 
   - name: OpenVPN | patch extra /etc/openvpn/server.conf
-    lineinfile: dest="/etc/openvpn/server.conf"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
-    with_items: "{{openvpn_server_conf_properties_extra | default([])}}"
+    lineinfile:
+      dest: "/etc/openvpn/server.conf"
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      insertafter: "{{ item.insertafter | default('EOF') }}"
+    with_items: "{{ openvpn_server_conf_properties_extra | default([]) }}"
     become: yes
     tags:
       - openvpn
 
   - name: OpenVPN | Keys in sysctl.conf
-    sysctl: name={{item.name}} value={{item.value}} ignoreerrors=yes state={{item.state | default('present')}}
-    with_items: "{{ openvpn_sysctl_conf_lines | default([])}}"
+    sysctl: name={{ item.name }} value={{ item.value }} ignoreerrors=yes state={{ item.state | default('present') }}
+    with_items: "{{ openvpn_sysctl_conf_lines | default([]) }}"
     become: yes
     tags:
       - openvpn
@@ -192,7 +208,7 @@
 # Who uses old kernels now ? We are targeting new one
 
   - name: OpenVPN | iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-    shell: iptables -t nat -A POSTROUTING -o {{openvpn_interface}} -j MASQUERADE
+    shell: iptables -t nat -A POSTROUTING -o {{ openvpn_interface }} -j MASQUERADE
     when: (firewall_used is not defined) or firewall_used == 'iptables'
     become: yes
     tags:
@@ -215,7 +231,7 @@
        :POSTROUTING ACCEPT [0:0]
 
        # Forward traffic through eth0 - Change to match you out-interface
-       -A POSTROUTING -s {{openvpn_remote_network}}.0/24 -o {{openvpn_interface}} -j MASQUERADE
+       -A POSTROUTING -s {{ openvpn_remote_network }}.0/24 -o {{ openvpn_interface }} -j MASQUERADE
 
        # don't delete the 'COMMIT' line or these nat table rules won't
        # be processed
@@ -231,7 +247,7 @@
     register: openvpn_oldstyle_name
 
   - name: OpenVPN | Enable and start service (openvpn@ca_key_name format)
-    service: name="openvpn@{{openvpn_ca_key_name}}" state="restarted" enabled="yes"
+    service: name="openvpn@{{ openvpn_ca_key_name }}" state="restarted" enabled="yes"
     when: docker_test is not defined and openvpn_oldstyle_name | failed
     become: yes
     tags:
@@ -245,13 +261,16 @@
       - openvpn
 
   - name: OpenVPN | Make client-configs dir
-    file: path="{{openvpn_ca_dir}}/client-configs/files" state="directory"
+    file: path="{{ openvpn_ca_dir }}/client-configs/files" state="directory"
     become: yes
     tags:
       - openvpn
 
   - name: OpenVPN | Copy boilerplate for client config
-    copy: remote_src=True src="/usr/share/doc/openvpn/examples/sample-config-files/client.conf" dest="{{openvpn_ca_dir}}/client-configs/base.conf"
+    copy:
+      remote_src: True
+      src: "/usr/share/doc/openvpn/examples/sample-config-files/client.conf"
+      dest: "{{ openvpn_ca_dir }}/client-configs/base.conf"
     ignore_errors: true
     register: client_config_sample_used
     become: yes
@@ -259,7 +278,7 @@
       - openvpn
 
   - name: OpenVPN | template base.conf from local state
-    template: src="{{role_dir}}/templates/server.conf.j2" dest="{{openvpn_ca_dir}}/client-configs/base.conf"
+    template: src="{{ role_dir }}/templates/server.conf.j2" dest="{{ openvpn_ca_dir }}/client-configs/base.conf"
     when: client_config_sample_used is failed
     become: yes
     tags:
@@ -267,37 +286,51 @@
 
 
   - name: OpenVPN | patch {{openvpn_ca_dir}}/client-configs/base.conf
-    lineinfile: dest="{{openvpn_ca_dir}}/client-configs/base.conf"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
-    with_items: "{{openvpn_client_properties | default([])}}"
+    lineinfile:
+      dest: "{{ openvpn_ca_dir }}/client-configs/base.conf"
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      insertafter: "{{ item.insertafter | default('EOF') }}"
+    with_items: "{{ openvpn_client_properties | default([]) }}"
     become: yes
     tags:
       - openvpn
 
-  - name: OpenVPN | patch extra {{openvpn_ca_dir}}/client-configs/base.conf
-    lineinfile: dest="{{openvpn_ca_dir}}/client-configs/base.conf"  regexp="{{item.regexp}}" line="{{item.line}}" insertafter="{{item.insertafter | default('EOF')}}"
-    with_items: "{{openvpn_client_properties_extra | default([])}}"
+  - name: OpenVPN | patch extra {{ openvpn_ca_dir }}/client-configs/base.conf
+    lineinfile:
+      dest: "{{ openvpn_ca_dir }}/client-configs/base.conf"
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      insertafter: "{{ item.insertafter | default('EOF') }}"
+    with_items: "{{ openvpn_client_properties_extra | default([]) }}"
     become: yes
     tags:
       - openvpn
 
   - name: OpenVPN | Template make_config.sh
-    template: src="{{role_dir}}/templates/make_config.sh.j2" dest="{{openvpn_ca_dir}}/client-configs/make_config.sh" mode="u=rwx,g=rx,o="
+    template:
+      src: "{{ role_dir }}/templates/make_config.sh.j2"
+      dest: "{{ openvpn_ca_dir }}/client-configs/make_config.sh"
+      mode: "u=rwx,g=rx,o="
     become: yes
     tags:
       - openvpn
 
   - name: OpenVPN | Generate Generate Client Configurations
-    shell: "./make_config.sh {{item.name}}"
+    shell: "./make_config.sh {{ item.name }}"
     args:
-      chdir: "{{openvpn_ca_dir}}/client-configs"
-    with_items: "{{openvpn_users | default([])}}"
+      chdir: "{{ openvpn_ca_dir }}/client-configs"
+    with_items: "{{ openvpn_users | default([]) }}"
     become: yes
     tags:
       - openvpn
 
   - name: Download OpenVPN profiles
-    synchronize: mode=pull src="{{openvpn_ca_dir}}/client-configs/files/{{item.name}}.ovpn" dest="{{playbook_dir}}/{{item.name}}.ovpn"
-    with_items: "{{openvpn_users | default([])}}"
+    synchronize:
+      mode: pull
+      src: "{{ openvpn_ca_dir }}/client-configs/files/{{ item.name }}.ovpn"
+      dest: "{{ playbook_dir }}/{{ item.name }}.ovpn"
+    with_items: "{{ openvpn_users | default([]) }}"
     ignore_errors: yes
     become: yes
     tags:
