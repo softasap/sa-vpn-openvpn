@@ -1,5 +1,8 @@
 box-example/roles
 *.retry
 tempfile
-do.sh
-*.ovpn
+local*.sh
+.idea
+__pycache__/
+**/*/__pycache__
+*.pyc

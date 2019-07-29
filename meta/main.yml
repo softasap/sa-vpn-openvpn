@@ -24,8 +24,8 @@ galaxy_info:
     - name: Ubuntu
       versions:
         - trusty
-        - xenial 
-        - bionic 
+        - xenial
+        - bionic
   galaxy_tags:
     - openvpn
     - vpn
