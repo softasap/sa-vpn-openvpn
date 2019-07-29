@@ -22,7 +22,7 @@
       - openvpn
       - skip_ansible_lint
 
-  - name: OpenVPN | patch {{openvpn_ca_dir}}/vars
+  - name: OpenVPN | patch {{ openvpn_ca_dir }}/vars
     lineinfile:
       dest: "{{ openvpn_ca_dir }}/vars"
       regexp: "{{ item.regexp }}"
@@ -57,10 +57,11 @@
   - name: OpenVPN | Build Root CA
     shell: ". {{ openvpn_ca_dir }}/vars &&  echo -en \"\n\n\n\n\n\n\n\ny\ny\n\" | ./build-ca"
     args:
-      chdir: "{{openvpn_ca_dir}}"
+      chdir: "{{ openvpn_ca_dir }}"
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | Build Certificate Authority
     shell: ". {{ openvpn_ca_dir }}/vars &&  ./clean-all"
@@ -105,19 +106,19 @@
   - name: OpenVPN | generate an HMAC signature to strengthen the server's TLS integrity verification
     shell: "openvpn --genkey --secret keys/ta.key"
     args:
-      chdir: "{{openvpn_ca_dir}}"
+      chdir: "{{ openvpn_ca_dir }}"
     become: yes
     tags:
       - openvpn
       - skip_ansible_lint
 
   - name: OpenVPN | Generate a Client Certificate and Key Pair
-#    shell: ". {{openvpn_ca_dir}}/vars && echo -en \"\n\n\n\n\n\n\n\n\n\ny\ny\n\" | ./build-key {{item.name}}"
-    shell: ". {{openvpn_ca_dir}}/vars && ./build-key --batch {{item.name}}"
-    with_items: "{{openvpn_users | default([])}}"
+#    shell: ". {{ openvpn_ca_dir }}/vars && echo -en \"\n\n\n\n\n\n\n\n\n\ny\ny\n\" | ./build-key {{ item.name }}"
+    shell: ". {{ openvpn_ca_dir }}/vars && ./build-key --batch {{ item.name }}"
+    with_items: "{{ openvpn_users | default([]) }}"
     when: item.password is not defined
     args:
-      chdir: "{{openvpn_ca_dir}}"
+      chdir: "{{ openvpn_ca_dir }}"
     become: yes
     register: create_client_nopass_results
     changed_when: "'error' not in create_client_nopass_results.stderr"
@@ -203,6 +204,7 @@
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
 # https://lists.debian.org/debian-kernel/2016/09/msg00150.html
 # Who uses old kernels now ? We are targeting new one
@@ -213,6 +215,7 @@
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | iptables-save
     shell: iptables-save
@@ -220,6 +223,7 @@
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: OpenVPN | /etc/ufw/before.rules
     blockinfile:
@@ -245,6 +249,8 @@
     shell: test -x /etc/init.d/openvpn
     ignore_errors: true
     register: openvpn_oldstyle_name
+    tags:
+      - skip_ansible_lint
 
   - name: OpenVPN | Enable and start service (openvpn@ca_key_name format)
     service: name="openvpn@{{ openvpn_ca_key_name }}" state="restarted" enabled="yes"
@@ -285,7 +291,7 @@
       - openvpn
 
 
-  - name: OpenVPN | patch {{openvpn_ca_dir}}/client-configs/base.conf
+  - name: OpenVPN | patch {{ openvpn_ca_dir }}/client-configs/base.conf
     lineinfile:
       dest: "{{ openvpn_ca_dir }}/client-configs/base.conf"
       regexp: "{{ item.regexp }}"
@@ -324,6 +330,7 @@
     become: yes
     tags:
       - openvpn
+      - skip_ansible_lint
 
   - name: Download OpenVPN profiles
     synchronize:
