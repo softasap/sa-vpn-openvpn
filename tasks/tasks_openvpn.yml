@@ -255,14 +255,14 @@
 
   - name: OpenVPN | Enable and start service (openvpn@ca_key_name format)
     service: name="openvpn@{{ openvpn_ca_key_name }}" state="restarted" enabled="yes"
-    when: docker_test is not defined and openvpn_oldstyle_name | failed
+    when: docker_test is not defined and openvpn_oldstyle_name is failed
     become: yes
     tags:
       - openvpn
 
   - name: OpenVPN | Enable and start service (openvpn format)
     service: name="openvpn" state="restarted" enabled="yes"
-    when: docker_test is not defined and not openvpn_oldstyle_name | failed
+    when: docker_test is not defined and not openvpn_oldstyle_name is failed
     become: yes
     tags:
       - openvpn
